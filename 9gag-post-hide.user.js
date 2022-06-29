@@ -22,7 +22,8 @@
     var MO_OPTIONS = {
         childList: true,
         attributes: false,
-        subtree: false
+        subtree: false,
+        characterData: false
     };
 
     var list = document.getElementById('list-view-2');
@@ -170,107 +171,177 @@
             return;
         }
 
-        var fn = function click_handler(){
-            var a = Array.from(menu_parent.querySelectorAll('.menu a')).filter(function menu_item_filter(menu_item){
-                return menu_item.textContent === 'I don\'t like this';
-            })[0];
+        menu_icon.addEventListener('click', function(){
+            setTimeout(function click_handler(){
+                var a = Array.from(menu_parent.querySelectorAll('.menu a')).filter(function menu_item_filter(menu_item){
+                    return menu_item.textContent === 'I don\'t like this';
+                })[0];
 
-            if(!a) return;
+                //if(!a) return;
 
-            a.addEventListener('focus', function(){
+                a.addEventListener('click', function(){
+                    click_next();
+                });
+
                 a.click();
-                setTimeout(click_next, 0);
-            });
-            a.focus();
+            }, 150);
+        });
+        menu_icon.click();
+    };
+
+    var start_click = function start_click(){
+        if(hidding || !hide_menu.length)
+        {
+            return;
+        }
+
+        hidding = true;
+        click_next();
+    };
+
+
+    var cleanup_article = function cleanup_article(article){
+        var a = article.querySelector('.ui-post-creator__author');
+
+        var id = article.id;
+        var post_id = id.replace(POST_ID_PREFIX, '');
+
+        if(post_id && info.data[post_id])
+        {
+            return;
+        }
+
+        var post = {
+            id: post_id,
+            promoted: a.classList.contains(PROMOTED_CLASS),
+            title: (article.querySelector('h1') || {textContent: '<No title>'}).textContent,
+            href: post_id ? 'https://9gag.com/gag/' + post_id : PROMOTED_HREF,
+            author: (article.querySelector('.ui-post-creator__author') || {textContent: '<No author>'}).textContent
         };
 
-        menu_icon.addEventListener('click', function(){
-            setTimeout(fn, 250);
-        });
-        menu_icon.addEventListener('focus', function(){
-            menu_icon.click();
-        });
-        menu_icon.focus();
+        info.total++;
+        info.all_data.push(post);
+
+        if(post_id)
+        {
+            info.ids.push(post_id);
+
+            info.data[post_id] = post;
+
+            if(a.href !== PROMOTED_HREF)
+            {
+                info.shown++;
+                return;
+            }
+        }
+
+        var menu_parent = article.querySelector('.uikit-popup-menu');
+        if(!menu_parent)
+        {
+            return;
+        }
+
+        info.hidden++;
+        info.hidden_data.push(post);
+        ui_add(post);
+
+        hide_menu.push(menu_parent);
     };
 
     var cleanup = function cleanup(node){
-        Array.from(node.querySelectorAll('article')).forEach(function article_fn(article){
-            var a = article.querySelector('.ui-post-creator__author');
-
-            var id = article.id;
-            var post_id = id.replace(POST_ID_PREFIX, '');
-
-            if(post_id && info.data[post_id])
-            {
-                return;
-            }
-
-            var post = {
-                id: post_id,
-                promoted: a.classList.contains(PROMOTED_CLASS),
-                title: (article.querySelector('h1') || {textContent: '<No title>'}).textContent,
-                href: post_id ? 'https://9gag.com/gag/' + post_id : PROMOTED_HREF,
-                author: (article.querySelector('.ui-post-creator__author') || {textContent: '<No author>'}).textContent
-            };
-
-            info.total++;
-            info.all_data.push(post);
-
-            if(post_id)
-            {
-                info.ids.push(post_id);
-
-                info.data[post_id] = post;
-
-                if(a.href !== PROMOTED_HREF)
-                {
-                    info.shown++;
-                    return;
-                }
-            }
-
-            var menu_parent = article.querySelector('.uikit-popup-menu');
-            if(!menu_parent)
-            {
-                return;
-            }
-
-            info.hidden++;
-            info.hidden_data.push(post);
-            ui_add(post);
-
-            hide_menu.push(menu_parent);
-        });
-
+        node.querySelectorAll('article').forEach(cleanup_article);
         ui_update();
-
-        if(!hidding && hide_menu.length)
-        {
-            hidding = true;
-            setTimeout(click_next, 0);
-        }
     };
 
 
     // ====================== ELEMENT INSERTION HANDLERS ======================
 
-    var fn = function mutation_handler(mutations){
-        mutations.forEach(function mutation_loop(mutation){
-            mutation.addedNodes.forEach(cleanup);
-        });
-    };
+    var observer = new MutationObserver(function mutation_handler(mutations){
+        setTimeout(function(){
+            start_click();
 
-    var observer = new MutationObserver(fn);
+            mutations.forEach(function mutation_loop(mutation){
+                mutation.addedNodes.forEach(cleanup);
+            });
+
+            setTimeout(start_click, 500);
+        }, 500);
+    });
     observer.observe(list, MO_OPTIONS);
 
     list.querySelectorAll('.list-stream').forEach(cleanup);
+    start_click();
 
+    var double_check = function double_check(){
+        start_click();
+
+        list.querySelectorAll('.list-stream[data-hide9-to-dc="1"]').forEach(function double_check(node){
+            console.log('Double-checking:', node, node.querySelectorAll('article'));
+
+            cleanup(node);
+
+            node.removeAttribute('data-hide9-to-dc');
+        });
+
+        start_click();
+    };
+
+    // setInterval(double_check, 2500);
+
+    /*window.addEventListener('error', function(){
+        double_check();
+        return false;
+    });*/
+
+    // forces to click the menu, if a post that shouldn't exist still exists
+    setInterval(function(){
+        info.hidden_data.forEach(function(post){
+            if(!post.id) return;
+
+            var article = document.getElementById(POST_ID_PREFIX + post.id);
+
+            if(!article) return;
+
+            article.querySelector('.uikit-popup-menu .button').click();
+        });
+
+        start_click();
+    }, 2500);
 
 
     // ============================================ GLOBAL FUNCTIONS ============================================
 
-    window._getPostData = function getPostData(){
-        // deep clone: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/assign
-        return JSON.parse(JSON.stringify(info));
+    window.hide9 = {
+        getData: function getData(){
+            // deep clone: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/assign
+            return JSON.parse(JSON.stringify(info));
+        },
+        getQueue: function getQueue(){
+            return {hidding: hidding, menus: hide_menu};
+        },
+        getPostData: function getPostData(id){
+            if(id instanceof Element)
+            {
+                id = id.id.replace(POST_ID_PREFIX, '');
+            }
+
+            return info.data[id];
+        },
+        isPostToBeHidden: function isPostToBeHidden(id){
+            if(id instanceof Element)
+            {
+                id = id.id.replace(POST_ID_PREFIX, '');
+            }
+
+            return info.hidden_data.filter(function(post){
+                return post.id === id;
+            }).length > 0;
+        },
+        getPostId: function getPostId(elem){
+            return elem.id.replace(POST_ID_PREFIX, '');
+        },/*,
+        forceDoubleCheck: function forceDoubleCheck(){
+            double_check();
+        }*/
     };
 })();
