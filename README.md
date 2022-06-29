@@ -1,2 +1,2 @@
 # 9gag-post-hide
-Hides specific posts from 9gag
+Hides all the content that belongs to 9GAGGER bot or promoted content
