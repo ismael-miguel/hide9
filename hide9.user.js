@@ -177,7 +177,7 @@
                     return menu_item.textContent === 'I don\'t like this';
                 })[0];
 
-                //if(!a) return;
+                if(!a) return;
 
                 a.addEventListener('click', function(){
                     click_next();
