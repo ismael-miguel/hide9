@@ -15,8 +15,12 @@ This is the best way, thanks to the awful coding from 9gag.com.
     I've added a crappy double-checking but doesn't always work.<br>
     Click on the `⋮` menu and it should remove the post.
 
-- **Pressing J doesn't go to the next post**<br>
+- **Pressing <kbd>J</kbd> doesn't go to the next post**<br>
     Blame 9gag for it.
 
 - **The list of posts doesn't close when you click outside**<br>
     I'm too lazy to fix it.
+
+- **The preview is missing/broken**<br>
+    Long posts with text and multiple images have a different URL.<br>
+    I'm too lazy to figure it out...
