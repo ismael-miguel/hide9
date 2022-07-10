@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         9gag Hide promoted/bot content
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      0.1.1
 // @description  Hides all the content that belongs to 9GAGGER bot or promoted content
 // @author       Ismael Miguel
 // @supportURL   https://github.com/ismael-miguel/9gag-post-hide/issues
@@ -38,6 +38,8 @@
         data: {},
         all_data: []
     };
+
+    var verify_hidden = [];
 
     // lazy, so, copy-paste: https://stackoverflow.com/questions/6234773/can-i-escape-html-special-chars-in-javascript
     function escapeHtml(unsafe)
@@ -150,6 +152,14 @@
 
     document.querySelector('#top-nav .function-wrap').appendChild(ui);
 
+    window.addEventListener('click', function(e){
+        if(e.target && !ui.contains(e.target))
+        {
+            ui_menu.style.display = 'none';
+            ui_menu_hidden = true;
+        }
+    });
+
 
     // ============================================ HIDDING AREA ============================================
 
@@ -211,12 +221,14 @@
             return;
         }
 
+        article.setAttribute('data-hide9-checked', '1');
+
         var post = {
             id: post_id,
             promoted: a.classList.contains(PROMOTED_CLASS),
             title: (article.querySelector('h1') || {textContent: '<No title>'}).textContent,
             href: post_id ? 'https://9gag.com/gag/' + post_id : PROMOTED_HREF,
-            author: (article.querySelector('.ui-post-creator__author') || {textContent: '<No author>'}).textContent
+            author: (a || {textContent: '<No author>'}).textContent
         };
 
         info.total++;
@@ -246,10 +258,17 @@
         ui_add(post);
 
         hide_menu.push(menu_parent);
+
+        if(post_id)
+        {
+            verify_hidden.push(post_id);
+        }
     };
 
     var cleanup = function cleanup(node){
-        node.querySelectorAll('article').forEach(cleanup_article);
+        node.setAttribute('data-hide9-to-dc', '1');
+
+        node.querySelectorAll('article:not([data-hide9-checked="1"])').forEach(cleanup_article);
         ui_update();
     };
 
@@ -272,46 +291,43 @@
     list.querySelectorAll('.list-stream').forEach(cleanup);
     start_click();
 
-    var double_check = function double_check(){
-        start_click();
-
-        list.querySelectorAll('.list-stream[data-hide9-to-dc="1"]').forEach(function double_check(node){
-            console.log('Double-checking:', node, node.querySelectorAll('article'));
-
+    // forces to click the menu, if a post that shouldn't exist still exists
+    setInterval(function(){
+        /*list.querySelectorAll('.list-stream[data-hide9-to-dc="1"]').forEach(function(node){
             cleanup(node);
 
             node.removeAttribute('data-hide9-to-dc');
+        });*/
+
+        list.querySelectorAll('article:not([data-hide9-checked="1"])').forEach(function(article){
+            cleanup_article(article);
+        });
+
+        verify_hidden = verify_hidden.filter(function(post_id){
+            return !!document.getElementById(POST_ID_PREFIX + post_id);
+        });
+
+        verify_hidden.forEach(function(post_id){
+            var article = document.getElementById(POST_ID_PREFIX + post_id);
+
+            // article.querySelector('.uikit-popup-menu .button').click();
+
+            var menu_parent = article.querySelector('.uikit-popup-menu');
+
+            if(!hide_menu.includes(menu_parent))
+            {
+                hide_menu.push(menu_parent);
+            }
         });
 
         start_click();
-    };
-
-    // setInterval(double_check, 2500);
-
-    /*window.addEventListener('error', function(){
-        double_check();
-        return false;
-    });*/
-
-    // forces to click the menu, if a post that shouldn't exist still exists
-    setInterval(function(){
-        info.hidden_data.forEach(function(post){
-            if(!post.id) return;
-
-            var article = document.getElementById(POST_ID_PREFIX + post.id);
-
-            if(!article) return;
-
-            article.querySelector('.uikit-popup-menu .button').click();
-        });
-
-        start_click();
-    }, 2500);
+    }, 1000);
 
 
     // ============================================ GLOBAL FUNCTIONS ============================================
 
     window.hide9 = {
+        version: '0.1.1',
         getData: function getData(){
             // deep clone: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/assign
             return JSON.parse(JSON.stringify(info));
@@ -339,9 +355,6 @@
         },
         getPostId: function getPostId(elem){
             return elem.id.replace(POST_ID_PREFIX, '');
-        },/*,
-        forceDoubleCheck: function forceDoubleCheck(){
-            double_check();
-        }*/
+        }
     };
 })();
