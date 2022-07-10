@@ -24,9 +24,6 @@ Promoted content doesn't have a title, therefore, it doesn't show on.<br>
 - **Pressing <kbd>J</kbd> doesn't go to the next post**<br>
     Blame 9gag for it.
 
-- **The list of posts doesn't close when you click outside**<br>
-    I'm too lazy to fix it.
-
 - **The preview is missing/broken**<br>
     Long posts with text and multiple images have a different URL.<br>
     I'm too lazy to figure it out...
