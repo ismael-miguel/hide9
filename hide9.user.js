@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         9gag Hide promoted/bot content
 // @namespace    http://tampermonkey.net/
-// @version      0.1.1
+// @version      0.1.2
 // @description  Hides all the content that belongs to 9GAGGER bot or promoted content
 // @author       Ismael Miguel
 // @supportURL   https://github.com/ismael-miguel/9gag-post-hide/issues
@@ -28,6 +28,8 @@
 
     var list = document.getElementById('list-view-2');
     if(!list) return;
+
+    var header = document.getElementById('top-nav');
 
     var info = {
         total: 0,
@@ -322,6 +324,101 @@
 
         start_click();
     }, 1000);
+
+
+    // ============================================ FIX J AND K KEY ISSUE ============================================
+
+    var scroll_element = document.scrollingElement;
+    var scroll_timeout = null;
+    var SCROLL_PADDING = 48;
+
+    scroll_element.style.setProperty('--hide9-scroll-margin', SCROLL_PADDING + 'px');
+
+    var scroll_css = document.createElement('style');
+    scroll_css.innerText = '.list-stream > article, .list-stream > div.inline-ad-container { scroll-margin-top: var(--hide9-scroll-margin); }';
+    document.head.appendChild(scroll_css);
+
+    var scroll_get_elem = function scroll_get_elem(article, going_down){
+        var next_prev = going_down ? 'nextElementSibling' : 'previousElementSibling';
+        var first_last = going_down ? 'firstElementChild' : 'lastElementChild';
+        var last_first = going_down ? 'lastElementChild' : 'firstElementChild';
+
+        var next = article[next_prev];
+
+        if(article.parentNode[last_first] === article)
+        {
+            next = article.parentNode[next_prev][first_last];
+        }
+
+        // jumps over ads, if they are hidden
+        if(
+            next.tagName !== 'ARTICLE'
+            && window.getComputedStyle(next).display === "none"
+        )
+        {
+            if(next.parentNode[last_first] === next)
+            {
+                next = next.parentNode[next_prev][first_last];
+            }
+            else
+            {
+                next = next[next_prev];
+            }
+        }
+
+        return next;
+    };
+
+    window.addEventListener('keydown', function(e){
+        if(
+           (document.activeElement && (
+               document.activeElement.tagName === 'INPUT'
+               || document.activeElement.tagName === 'TEXTAREA'
+           ))
+           || (e.code !== 'KeyJ' && e.code !== 'KeyK')
+           || e.altKey
+           || e.ctrlKey
+           || e.shiftKey
+        )
+        {
+            return;
+        }
+
+        var scroll = scroll_element.scrollTop;
+        var scroll_options = {};
+        var going_down = e.code === 'KeyJ';
+
+        if(scroll_timeout)
+        {
+            clearTimeout(scroll_timeout);
+        }
+
+        scroll_timeout = setTimeout(function(){
+            scroll_timeout = null;
+            if(scroll_element.scrollTop === scroll)
+            {
+                var list_rect = list.getBoundingClientRect();
+                var elements = document.elementsFromPoint((list_rect.left + 5) | 0, SCROLL_PADDING + 5);
+
+                var article = elements.filter(function(e){
+                    return e.tagName === 'ARTICLE';
+                })[0];
+
+                if(!article)
+                {
+                    return;
+                }
+
+                var next = scroll_get_elem(article, going_down);
+
+                if(next)
+                {
+                    next.scrollIntoView(scroll_options);
+                }
+            }
+        }, 250);
+    });
+
 
 
     // ============================================ GLOBAL FUNCTIONS ============================================
