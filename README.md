@@ -17,12 +17,14 @@ Promoted content doesn't have a title, therefore, it doesn't show on.<br>
 ## Issues:
 
 - **Some posts aren't hidding**<br>
-    Can't figure out why it doesn't scan some posts.<br>
-    I've added a crappy double-checking but doesn't always work.<br>
-    Click on the `⋮` menu and it should remove the post.
+    When the posts are added to the document, not all `<article>` elements are available right away.<br>
+    This is either a 9gag bug or a bug with the browser.<br>
+    I've added a rather aggressive double-checking system which doesn't seem to be 100% enough...
 
-- **Pressing <kbd>J</kbd> doesn't go to the next post**<br>
-    Blame 9gag for it.
+- **Pressing <kbd>J</kbd> or <kbd>K<kbd> doesn't go to the next post**<br>
+    Should be working fine.<br>
+    However, sometimes, it may get "stuck".<br>
+    This happens because of ads.
 
 - **The preview is missing/broken**<br>
     Long posts with text and multiple images have a different URL.<br>
